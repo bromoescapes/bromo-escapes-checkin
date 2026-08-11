@@ -510,7 +510,8 @@ input[type="file"] {
 const API_URL =
     "https://script.google.com/macros/s/AKfycbyzEi5Bf1HJ5iioUVkpuHr8G1yWRMrGkuSJ7v_OuaGkdxyPT_bDHBYJ0MvpegxwaGYx/exec";
 
-
+const API_TOKEN =
+    "BROMO-KASIR-2026-9876";
 /* =========================================================
    VARIABLE
 ========================================================= */
@@ -891,28 +892,24 @@ async function findCustomer() {
         return;
     }
 
-
     busy = true;
 
     hideMessage();
-
     loading(true);
-
 
     try {
 
-        const response =
-            await api(
-                "findCustomer",
-                {
-                    noPelanggan: number
-                }
-            );
-
+        const response = await api(
+            "search",
+            {
+                customer: number,
+                token: API_TOKEN
+            }
+        );
 
         if (
             !response ||
-            response.success === false
+            response.success !== true
         ) {
 
             throw new Error(
@@ -921,17 +918,12 @@ async function findCustomer() {
             );
         }
 
-
         currentCustomer =
-            response.customer ||
-            response.data ||
-            response;
-
+            response.customer;
 
         showCustomer(
             currentCustomer
         );
-
 
     } catch (error) {
 
@@ -945,9 +937,7 @@ async function findCustomer() {
 
     }
 
-
     loading(false);
-
     busy = false;
 }
 
@@ -1036,13 +1026,11 @@ async function checkIn() {
         return;
     }
 
-
     if (busy) return;
 
     busy = true;
 
     hideMessage();
-
 
     const button =
         document.getElementById(
@@ -1054,30 +1042,27 @@ async function checkIn() {
     button.innerText =
         "⏳ MEMPROSES...";
 
-
     try {
 
         const number =
-            currentCustomer.noPelanggan ||
-            currentCustomer.customerNo ||
+            currentCustomer.customerId ||
             document
                 .getElementById("customerNumber")
                 .value
-                .trim();
+                .trim()
+                .toUpperCase();
 
-
-        const response =
-            await api(
-                "checkIn",
-                {
-                    noPelanggan: number
-                }
-            );
-
+        const response = await api(
+            "checkin",
+            {
+                customer: number,
+                token: API_TOKEN
+            }
+        );
 
         if (
             !response ||
-            response.success === false
+            response.success !== true
         ) {
 
             throw new Error(
@@ -1086,61 +1071,47 @@ async function checkIn() {
             );
         }
 
-
         const visit =
-            response.jumlahKunjungan ??
-            response.visitCount ??
-            response.customer?.jumlahKunjungan ??
-            0;
-
+            Number(response.visits) || 0;
 
         document
             .getElementById("newVisit")
             .innerText =
             visit;
 
-
         /*
-          Reward kunjungan ke-10
-        */
-
-        if (
-            response.voucherCreated === true ||
-            response.reward === true ||
-            Number(visit) === 10
-        ) {
+         * Reward ke-10
+         */
+        if (response.reward === true) {
 
             document
                 .getElementById("reward")
-                .classList.remove("hidden");
+                .classList
+                .remove("hidden");
 
         } else {
 
             document
                 .getElementById("reward")
-                .classList.add("hidden");
-
+                .classList
+                .add("hidden");
         }
-
 
         document
             .getElementById("customerCard")
             .style.display =
             "none";
 
-
         document
             .getElementById("checkinCard")
             .style.display =
             "block";
 
-
         showMessage(
             response.message ||
-            "Check-in berhasil.",
+            "CHECK-IN BERHASIL.",
             "success"
         );
-
 
         document
             .getElementById("checkinCard")
@@ -1149,46 +1120,24 @@ async function checkIn() {
                 block: "center"
             });
 
-
     } catch (error) {
 
         console.error(error);
 
-        const msg =
+        showMessage(
             error.message ||
-            "Check-in gagal.";
-
-
-        if (
-            msg.toLowerCase()
-                .includes("5 jam")
-        ) {
-
-            showMessage(
-                "⏱️ " + msg,
-                "warning"
-            );
-
-        } else {
-
-            showMessage(
-                msg,
-                "error"
-            );
-        }
-
+            "Check-in gagal.",
+            "error"
+        );
 
         button.disabled = false;
 
         button.innerText =
             "✅ CHECK-IN";
-
     }
-
 
     busy = false;
 }
-
 
 /* =========================================================
    RESET
@@ -1246,29 +1195,6 @@ function api(action, params = {}) {
     return new Promise(
         (resolve, reject) => {
 
-            if (
-                !API_URL ||
-                API_URL.includes(
-                    "PASTE_URL"
-                )
-            ) {
-
-                reject(
-                    new Error(
-                        "URL Code.gs belum dipasang di index.html."
-                    )
-                );
-
-                return;
-            }
-
-
-            /*
-              JSONP callback
-              agar Firebase → Apps Script
-              dapat berkomunikasi lintas domain.
-            */
-
             const callback =
                 "callback_" +
                 Date.now() +
@@ -1277,35 +1203,27 @@ function api(action, params = {}) {
                     Math.random() * 100000
                 );
 
-
             const script =
-                document.createElement(
-                    "script"
-                );
-
+                document.createElement("script");
 
             let finished = false;
 
-
             const timer =
-                setTimeout(
-                    () => {
+                setTimeout(() => {
 
-                        if (finished) return;
+                    if (finished) return;
 
-                        finished = true;
+                    finished = true;
 
-                        cleanup();
+                    cleanup();
 
-                        reject(
-                            new Error(
-                                "Server terlalu lama merespons."
-                            )
-                        );
+                    reject(
+                        new Error(
+                            "Server terlalu lama merespons."
+                        )
+                    );
 
-                    },
-                    15000
-                );
+                }, 15000);
 
 
             window[callback] =
@@ -1327,7 +1245,9 @@ function api(action, params = {}) {
 
                 delete window[callback];
 
-                if (script.parentNode) {
+                if (
+                    script.parentNode
+                ) {
 
                     script.parentNode
                         .removeChild(script);
@@ -1338,10 +1258,17 @@ function api(action, params = {}) {
             const query =
                 new URLSearchParams();
 
+
+            /*
+             * Code.gs Anda menggunakan
+             * action=search / checkin
+             */
+
             query.set(
-                "api",
+                "action",
                 action
             );
+
 
             query.set(
                 "callback",
@@ -1388,12 +1315,9 @@ function api(action, params = {}) {
             document.body.appendChild(
                 script
             );
-
         }
     );
 }
-
-
 /* =========================================================
    ENTER = SEARCH
 ========================================================= */
