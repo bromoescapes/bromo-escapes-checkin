@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -29,7 +28,7 @@
 
         .header {
             background: #111827;
-            color: white;
+            color: #fff;
             text-align: center;
             padding: 22px 15px;
         }
@@ -55,7 +54,7 @@
         }
 
         .card {
-            background: white;
+            background: #fff;
             border-radius: 18px;
             padding: 18px;
             margin-bottom: 15px;
@@ -74,7 +73,7 @@
             overflow: hidden;
             border-radius: 15px;
             background: #111827;
-            min-height: 50px;
+            min-height: 10px;
         }
 
         #reader video {
@@ -82,12 +81,9 @@
             border-radius: 15px;
         }
 
-        #reader__dashboard {
-            padding: 10px !important;
-        }
-
-        #reader__dashboard_section_csr button {
-            width: auto;
+        #reader__scan_region {
+            border-radius: 15px;
+            overflow: hidden;
         }
 
         .camera-status {
@@ -106,6 +102,11 @@
             font-size: 15px;
             font-weight: 800;
             cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.98);
         }
 
         button:disabled {
@@ -115,22 +116,22 @@
 
         .btn-camera {
             background: #111827;
-            color: white;
+            color: #fff;
         }
 
         .btn-stop {
             background: #dc2626;
-            color: white;
+            color: #fff;
         }
 
         .btn-search {
             background: #2563eb;
-            color: white;
+            color: #fff;
         }
 
         .btn-checkin {
             background: #16a34a;
-            color: white;
+            color: #fff;
             font-size: 16px;
         }
 
@@ -156,6 +157,7 @@
         input[type="file"] {
             width: 100%;
             padding: 10px 0;
+            font-size: 14px;
         }
 
         .divider {
@@ -217,7 +219,6 @@
         .row {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
             gap: 15px;
             padding: 10px 0;
             border-bottom: 1px solid #e5e7eb;
@@ -319,23 +320,10 @@
             padding: 10px 15px 25px;
         }
 
-        @media (max-width: 480px) {
-            .container {
-                padding: 10px;
-            }
-
-            .card {
-                padding: 15px;
-                border-radius: 15px;
-            }
-
-            .customer-name {
-                font-size: 20px;
-            }
-
-            .visit-number {
-                font-size: 52px;
-            }
+        .upload-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
         }
     </style>
 </head>
@@ -349,10 +337,10 @@
 
 <main class="container">
 
-    <!-- PESAN -->
+    <!-- MESSAGE -->
     <div id="message" class="message"></div>
 
-    <!-- SCANNER -->
+    <!-- QR SCANNER -->
     <div class="card">
 
         <div class="title">
@@ -391,7 +379,7 @@
             ATAU
         </div>
 
-        <div style="font-size:13px;font-weight:700;margin-bottom:8px;">
+        <div class="upload-title">
             🖼️ Upload / Foto QR
         </div>
 
@@ -400,11 +388,13 @@
             id="qrFile"
             accept="image/*"
             capture="environment"
+            onchange="scanPhoto(event)"
         >
 
     </div>
 
-    <!-- MANUAL -->
+
+    <!-- MANUAL SEARCH -->
     <div class="card">
 
         <div class="title">
@@ -416,7 +406,7 @@
             type="text"
             placeholder="Contoh: BE000001"
             autocomplete="off"
-            autocapitalize="characters"
+            inputmode="text"
         >
 
         <button
@@ -430,11 +420,13 @@
 
     </div>
 
+
     <!-- LOADING -->
     <div id="loading" class="loading">
         <span class="spinner"></span>
         Mencari pelanggan...
     </div>
+
 
     <!-- CUSTOMER -->
     <div id="customerCard" class="card customer">
@@ -491,7 +483,8 @@
 
     </div>
 
-    <!-- HASIL CHECK-IN -->
+
+    <!-- CHECK-IN RESULT -->
     <div id="checkinCard" class="card checkin-result">
 
         <div class="success-icon">
@@ -533,17 +526,27 @@
     Bromo Escapes Customer Loyalty System
 </div>
 
-<script>
-/* =========================================================
-   KONFIGURASI
-   ========================================================= */
 
-const API_URL = "PASTE_URL_CODE_GS_ANDA_DI_SINI";
+<script>
+
+/* =========================================================
+   KONFIGURASI API
+   =========================================================
+
+   GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA.
+
+   Contoh:
+   https://script.google.com/macros/s/XXXXXXXXXXXX/exec
+
+========================================================= */
+
+const API_URL =
+    "https://script.google.com/macros/s/AKfycbyzEi5Bf1HJ5iioUVkpuHr8G1yWRMrGkuSJ7v_OuaGkdxyPT_bDHBYJ0MvpegxwaGYx/exec";
 
 
 /* =========================================================
    VARIABLE
-   ========================================================= */
+========================================================= */
 
 let scanner = null;
 let cameraActive = false;
@@ -553,67 +556,77 @@ let busy = false;
 
 /* =========================================================
    MESSAGE
-   ========================================================= */
+========================================================= */
 
-function showMessage(text, type = "warning") {
-    const el = document.getElementById("message");
+function showMessage(text, type = "error") {
 
-    el.className = "message " + type;
-    el.innerHTML = text;
+    const element =
+        document.getElementById("message");
+
+    element.className =
+        "message " + type;
+
+    element.innerHTML = text;
 }
 
-function hideMessage() {
-    const el = document.getElementById("message");
 
-    el.className = "message";
-    el.innerHTML = "";
+function hideMessage() {
+
+    const element =
+        document.getElementById("message");
+
+    element.className = "message";
+
+    element.innerHTML = "";
 }
 
 
 /* =========================================================
    LOADING
-   ========================================================= */
+========================================================= */
 
 function setLoading(show) {
+
     document.getElementById("loading").style.display =
         show ? "block" : "none";
 
-    document.getElementById("searchButton").disabled = show;
+    document.getElementById("searchButton").disabled =
+        show;
 }
 
 
 /* =========================================================
    CAMERA
-   ========================================================= */
+========================================================= */
 
 async function startCamera() {
+
     if (cameraActive) {
         return;
     }
 
     hideMessage();
 
-    const status = document.getElementById("cameraStatus");
+    const status =
+        document.getElementById("cameraStatus");
 
     try {
-        status.innerText = "⏳ Meminta izin kamera...";
 
-        if (scanner) {
-            try {
-                await scanner.clear();
-            } catch (e) {
-                console.log("Scanner clear:", e);
-            }
-        }
+        status.innerText =
+            "⏳ Meminta izin kamera...";
 
-        scanner = new Html5Qrcode("reader");
+        scanner =
+            new Html5Qrcode("reader");
 
         const config = {
             fps: 10,
+
             qrbox: function(width, height) {
-                const size = Math.floor(
-                    Math.min(width, height) * 0.7
-                );
+
+                const size =
+                    Math.floor(
+                        Math.min(width, height) * 0.7
+                    );
 
                 return {
                     width: size,
@@ -622,7 +635,9 @@ async function startCamera() {
             }
         };
 
+
         try {
+
             await scanner.start(
                 {
                     facingMode: {
@@ -635,8 +650,9 @@ async function startCamera() {
             );
 
         } catch (error) {
+
             console.log(
-                "Fallback camera mode:",
+                "Fallback kamera:",
                 error
             );
 
@@ -649,6 +665,7 @@ async function startCamera() {
                 qrError
             );
         }
+
 
         cameraActive = true;
 
@@ -663,8 +680,13 @@ async function startCamera() {
         status.innerText =
             "🟢 Kamera aktif — arahkan ke QR pelanggan";
 
+
     } catch (error) {
-        console.error("Camera error:", error);
+
+        console.error(
+            "Camera error:",
+            error
+        );
 
         cameraActive = false;
 
@@ -683,94 +705,118 @@ async function startCamera() {
 
 /* =========================================================
    STOP CAMERA
-   ========================================================= */
+========================================================= */
 
 async function stopCamera() {
+
     try {
+
         if (scanner && cameraActive) {
+
             await scanner.stop();
         }
+
     } catch (error) {
-        console.log("Stop camera:", error);
+
+        console.log(
+            "Stop camera:",
+            error
+        );
+
+    } finally {
+
+        cameraActive = false;
+
+        document
+            .getElementById("startBtn")
+            .classList.remove("hidden");
+
+        document
+            .getElementById("stopBtn")
+            .classList.add("hidden");
+
+        document
+            .getElementById("cameraStatus")
+            .innerText =
+            "Kamera belum aktif";
     }
-
-    cameraActive = false;
-
-    document
-        .getElementById("startBtn")
-        .classList.remove("hidden");
-
-    document
-        .getElementById("stopBtn")
-        .classList.add("hidden");
-
-    document
-        .getElementById("cameraStatus")
-        .innerText = "Kamera belum aktif";
 }
 
 
 /* =========================================================
-   QR BERHASIL
-   ========================================================= */
+   QR SUCCESS
+========================================================= */
 
 async function qrSuccess(decodedText) {
+
     if (busy) {
         return;
     }
 
     busy = true;
 
-    console.log("QR berhasil:", decodedText);
+    try {
 
-    const customerNumber =
-        extractCustomerNumber(decodedText);
+        console.log(
+            "QR berhasil:",
+            decodedText
+        );
 
-    document.getElementById("customerNumber").value =
-        customerNumber;
+        const customerNumber =
+            extractCustomerNumber(decodedText);
 
-    await stopCamera();
+        document
+            .getElementById("customerNumber")
+            .value =
+            customerNumber;
 
-    busy = false;
+        await stopCamera();
 
-    await findCustomer();
+        await findCustomer(true);
+
+    } finally {
+
+        busy = false;
+    }
 }
 
-
-/* =========================================================
-   QR ERROR
-   ========================================================= */
 
 function qrError(errorMessage) {
-    // Tidak perlu menampilkan error.
-    // Scanner akan terus mencoba membaca QR.
+    // Sengaja tidak menampilkan error.
+    // Scanner terus mencoba membaca QR.
 }
 
 
 /* =========================================================
-   EXTRACT NOMOR PELANGGAN
-   ========================================================= */
+   EXTRACT CUSTOMER NUMBER
+========================================================= */
 
 function extractCustomerNumber(text) {
-    text = String(text || "").trim();
+
+    text =
+        String(text || "").trim();
+
 
     /*
-        Format langsung:
+        QR langsung:
+
         BE000001
     */
 
     if (/^BE\d+$/i.test(text)) {
+
         return text.toUpperCase();
     }
 
+
     /*
-        Kalau QR berupa URL.
-        Contoh:
-        https://domain.com/?customer=BE000001
+        Jika QR berupa URL
     */
 
     try {
-        const url = new URL(text);
+
+        const url =
+            new URL(text);
 
         const keys = [
             "customer",
@@ -781,9 +827,12 @@ function extractCustomerNumber(text) {
         ];
 
         for (const key of keys) {
-            const value = url.searchParams.get(key);
+
+            const value =
+                url.searchParams.get(key);
 
             if (value) {
+
                 return value
                     .trim()
                     .toUpperCase();
@@ -791,35 +840,37 @@ function extractCustomerNumber(text) {
         }
 
     } catch (error) {
+
         // Bukan URL.
     }
 
+
     /*
         Cari pola BE000001
-        di dalam teks QR.
     */
 
-    const match = text.match(/BE\d+/i);
+    const match =
+        text.match(/BE\d+/i);
 
     if (match) {
-        return match[0].toUpperCase();
+
+        return match[0]
+            .toUpperCase();
     }
+
 
     return text.toUpperCase();
 }
 
 
 /* =========================================================
-   UPLOAD / FOTO QR
-   ========================================================= */
-
-document
-    .getElementById("qrFile")
-    .addEventListener("change", scanPhoto);
-
+   SCAN FOTO QR
+========================================================= */
 
 async function scanPhoto(event) {
-    const file = event.target.files[0];
+
+    const file =
+        event.target.files[0];
 
     if (!file) {
         return;
@@ -827,33 +878,31 @@ async function scanPhoto(event) {
 
     hideMessage();
 
-    let photoScanner = null;
-
     try {
-        photoScanner = new Html5Qrcode("reader");
+
+        const reader =
+            new Html5Qrcode("reader");
 
         const decoded =
-            await photoScanner.scanFile(
+            await reader.scanFile(
                 file,
                 true
             );
 
-        console.log(
-            "QR dari foto:",
-            decoded
-        );
-
         const number =
             extractCustomerNumber(decoded);
 
-        document.getElementById("customerNumber").value =
+        document
+            .getElementById("customerNumber")
+            .value =
             number;
 
-        await photoScanner.clear();
+        await reader.clear();
 
         await findCustomer();
 
     } catch (error) {
+
         console.error(
             "Photo QR error:",
             error
@@ -866,25 +915,19 @@ async function scanPhoto(event) {
         );
 
     } finally {
-        event.target.value = "";
 
-        if (photoScanner) {
-            try {
-                await photoScanner.clear();
-            } catch (e) {
-                console.log(e);
-            }
-        }
+        event.target.value = "";
     }
 }
 
 
 /* =========================================================
-   CARI CUSTOMER
-   ========================================================= */
+   FIND CUSTOMER
+========================================================= */
 
-async function findCustomer() {
-    if (busy) {
+async function findCustomer(fromQR = false) {
+
+    if (busy && !fromQR) {
         return;
     }
 
@@ -897,52 +940,65 @@ async function findCustomer() {
             .toUpperCase();
 
     if (!number) {
+
         showMessage(
             "Masukkan No Pelanggan.",
             "warning"
         );
 
-        input.focus();
-
         return;
     }
+
 
     busy = true;
 
     hideMessage();
+
     setLoading(true);
 
+
     try {
-        const response = await api(
-            "findCustomer",
-            {
-                noPelanggan: number
-            }
-        );
+
+        const response =
+            await api(
+                "findCustomer",
+                {
+                    noPelanggan: number
+                }
+            );
+
 
         console.log(
-            "Response findCustomer:",
+            "findCustomer response:",
             response
         );
+
 
         if (
             !response ||
             response.success === false
         ) {
+
             throw new Error(
                 response?.message ||
                 "Pelanggan tidak ditemukan."
             );
         }
 
+
         currentCustomer =
             response.customer ||
             response.data ||
             response;
 
-        showCustomer(currentCustomer);
+
+        showCustomer(
+            currentCustomer
+        );
+
 
     } catch (error) {
+
         console.error(
             "Find customer error:",
             error
@@ -955,15 +1011,17 @@ async function findCustomer() {
         );
 
     } finally {
+
         setLoading(false);
+
         busy = false;
     }
 }
 
 
 /* =========================================================
-   TAMPILKAN CUSTOMER
-   ========================================================= */
+   SHOW CUSTOMER
+========================================================= */
 
 function showCustomer(customer) {
 
@@ -972,35 +1030,43 @@ function showCustomer(customer) {
         customer.name ||
         "-";
 
+
     document.getElementById("customerNo").innerText =
         customer.noPelanggan ||
         customer.customerNo ||
         "-";
+
 
     document.getElementById("customerPhone").innerText =
         customer.noHp ||
         customer.phone ||
         "-";
 
+
     document.getElementById("customerTravel").innerText =
         customer.namaTravel ||
         customer.travel ||
         "-";
+
 
     document.getElementById("visitCount").innerText =
         customer.jumlahKunjungan ??
         customer.visitCount ??
         0;
 
+
     document.getElementById("voucherStatus").innerText =
         customer.voucherStatus ||
         "-";
 
+
     document.getElementById("customerCard").style.display =
         "block";
 
+
     document.getElementById("checkinCard").style.display =
         "none";
+
 
     document
         .getElementById("customerCard")
@@ -1012,12 +1078,13 @@ function showCustomer(customer) {
 
 
 /* =========================================================
-   CHECK-IN
-   ========================================================= */
+   CHECK IN
+========================================================= */
 
 async function checkIn() {
 
     if (!currentCustomer) {
+
         showMessage(
             "Pelanggan belum dipilih.",
             "warning"
@@ -1026,19 +1093,28 @@ async function checkIn() {
         return;
     }
 
+
     if (busy) {
         return;
     }
+
 
     busy = true;
 
     hideMessage();
 
+
     const button =
-        document.getElementById("checkinButton");
+        document.getElementById(
+            "checkinButton"
+        );
+
 
     button.disabled = true;
-    button.innerText = "⏳ MEMPROSES...";
+
+    button.innerText =
+        "⏳ MEMPROSES...";
+
 
     try {
 
@@ -1051,11 +1127,6 @@ async function checkIn() {
                 .trim()
                 .toUpperCase();
 
-        if (!number) {
-            throw new Error(
-                "No pelanggan tidak ditemukan."
-            );
-        }
 
         const response =
             await api(
@@ -1065,20 +1136,24 @@ async function checkIn() {
                 }
             );
 
+
         console.log(
-            "Response checkIn:",
+            "checkIn response:",
             response
         );
+
 
         if (
             !response ||
             response.success === false
         ) {
+
             throw new Error(
                 response?.message ||
                 "Check-in gagal."
             );
         }
+
 
         const visit =
             response.jumlahKunjungan ??
@@ -1086,36 +1161,49 @@ async function checkIn() {
             response.customer?.jumlahKunjungan ??
             0;
 
-        document.getElementById("newVisit").innerText =
+
+        document
+            .getElementById("newVisit")
+            .innerText =
             visit;
+
 
         /*
             Reward kunjungan ke-10
         */
 
-        const reward =
+        const rewardCreated =
             response.voucherCreated === true ||
             response.reward === true ||
             Number(visit) === 10;
+
 
         document
             .getElementById("reward")
             .classList.toggle(
                 "hidden",
-                !reward
+                !rewardCreated
             );
 
-        document.getElementById("customerCard").style.display =
+
+        document
+            .getElementById("customerCard")
+            .style.display =
             "none";
 
-        document.getElementById("checkinCard").style.display =
+
+        document
+            .getElementById("checkinCard")
+            .style.display =
             "block";
+
 
         showMessage(
             response.message ||
             "Check-in berhasil.",
             "success"
         );
+
 
         document
             .getElementById("checkinCard")
@@ -1124,6 +1212,7 @@ async function checkIn() {
                 block: "center"
             });
 
+
     } catch (error) {
 
         console.error(
@@ -1131,31 +1220,38 @@ async function checkIn() {
             error
         );
 
-        const msg =
+        const message =
             error.message ||
             "Check-in gagal.";
 
+
         if (
-            msg.toLowerCase().includes("5 jam")
+            message
+                .toLowerCase()
+                .includes("5 jam")
         ) {
 
             showMessage(
-                "⏱️ " + msg,
+                "⏱️ " + message,
                 "warning"
             );
 
         } else {
 
             showMessage(
-                msg,
+                message,
                 "error"
             );
         }
 
+
         button.disabled = false;
-        button.innerText = "✅ CHECK-IN";
+
+        button.innerText =
+            "✅ CHECK-IN";
 
     } finally {
+
         busy = false;
     }
 }
@@ -1163,35 +1259,46 @@ async function checkIn() {
 
 /* =========================================================
    RESET
-   ========================================================= */
+========================================================= */
 
-function resetPage() {
+async function resetPage() {
+
+    await stopCamera();
 
     currentCustomer = null;
 
     hideMessage();
 
-    document.getElementById("customerNumber").value =
-        "";
+    document
+        .getElementById("customerNumber")
+        .value = "";
 
-    document.getElementById("customerCard").style.display =
+    document
+        .getElementById("customerCard")
+        .style.display =
         "none";
 
-    document.getElementById("checkinCard").style.display =
+    document
+        .getElementById("checkinCard")
+        .style.display =
         "none";
 
-    document.getElementById("reward").classList.add(
-        "hidden"
-    );
+    document
+        .getElementById("reward")
+        .classList.add("hidden");
 
-    document.getElementById("newVisit").innerText =
-        "0";
 
     const button =
-        document.getElementById("checkinButton");
+        document.getElementById(
+            "checkinButton"
+        );
+
 
     button.disabled = false;
-    button.innerText = "✅ CHECK-IN";
+
+    button.innerText =
+        "✅ CHECK-IN";
+
 
     window.scrollTo({
         top: 0,
@@ -1201,8 +1308,8 @@ function resetPage() {
 
 
 /* =========================================================
-   API GOOGLE APPS SCRIPT
-   ========================================================= */
+   API / GOOGLE APPS SCRIPT
+========================================================= */
 
 function api(action, params = {}) {
 
@@ -1210,7 +1317,7 @@ function api(action, params = {}) {
         (resolve, reject) => {
 
             /*
-                Pastikan URL Code.gs sudah diisi.
+                CEK URL
             */
 
             if (
@@ -1229,27 +1336,51 @@ function api(action, params = {}) {
                 return;
             }
 
+
+            /*
+                Pastikan URL berakhir /exec
+            */
+
+            let baseURL =
+                API_URL.trim();
+
+
+            /*
+                Hilangkan ? atau /
+                yang tidak diperlukan
+            */
+
+            baseURL =
+                baseURL.replace(
+                    /[?\/]+$/,
+                    ""
+                );
+
+
             /*
                 JSONP callback
-                untuk komunikasi cross-domain
-                dengan Google Apps Script.
             */
 
             const callback =
-                "callback_" +
+                "bromoCallback_" +
                 Date.now() +
                 "_" +
                 Math.floor(
                     Math.random() * 100000
                 );
 
+
             const script =
-                document.createElement("script");
+                document.createElement(
+                    "script"
+                );
+
 
             let finished = false;
 
+
             /*
-                Timeout 15 detik.
+                Timeout
             */
 
             const timer =
@@ -1266,7 +1397,7 @@ function api(action, params = {}) {
 
                         reject(
                             new Error(
-                                "Server terlalu lama merespons."
+                                "Server terlalu lama merespons. Periksa URL Code.gs dan deployment Web App."
                             )
                         );
 
@@ -1274,8 +1405,9 @@ function api(action, params = {}) {
                     15000
                 );
 
+
             /*
-                Callback JSONP.
+                Callback global
             */
 
             window[callback] =
@@ -1294,78 +1426,87 @@ function api(action, params = {}) {
                     resolve(data);
                 };
 
+
             /*
-                Bersihkan script dan callback.
+                Cleanup
             */
 
             function cleanup() {
 
                 try {
                     delete window[callback];
-                } catch (e) {
-                    console.log(e);
-                }
+                } catch (error) {}
 
-                if (script.parentNode) {
-                    script.parentNode.removeChild(
-                        script
-                    );
+                if (
+                    script &&
+                    script.parentNode
+                ) {
+
+                    script.parentNode
+                        .removeChild(script);
                 }
             }
 
+
             /*
-                Query parameters.
+                Build query
             */
 
             const query =
                 new URLSearchParams();
+
 
             query.set(
                 "api",
                 action
             );
 
+
             query.set(
                 "callback",
                 callback
             );
 
-            Object.keys(params).forEach(
-                key => {
 
-                    const value =
-                        params[key];
+            Object.keys(params)
+                .forEach(
+                    key => {
 
-                    if (
-                        value !== undefined &&
-                        value !== null
-                    ) {
+                        const value =
+                            params[key];
 
-                        query.set(
-                            key,
-                            String(value)
-                        );
+                        if (
+                            value !== undefined &&
+                            value !== null
+                        ) {
+
+                            query.set(
+                                key,
+                                value
+                            );
+                        }
                     }
-                }
-            );
+                );
+
 
             /*
-                Hindari error jika API_URL
-                memiliki tanda ? di akhir.
+                URL final
             */
 
-            const separator =
-                API_URL.includes("?")
-                    ? "&"
-                    : "?";
-
             script.src =
-                API_URL +
-                separator +
+                baseURL +
+                "?" +
                 query.toString();
 
+
+            console.log(
+                "API Request:",
+                script.src
+            );
+
+
             /*
-                Error koneksi.
+                Error handler
             */
 
             script.onerror =
@@ -1383,10 +1524,15 @@ function api(action, params = {}) {
 
                     reject(
                         new Error(
-                            "Tidak dapat terhubung ke Code.gs."
+                            "Tidak dapat terhubung ke Code.gs. Pastikan Web App sudah di-deploy sebagai Anyone."
                         )
                     );
                 };
+
+
+            /*
+                Jalankan request
+            */
 
             document.body.appendChild(
                 script
@@ -1398,7 +1544,7 @@ function api(action, params = {}) {
 
 /* =========================================================
    ENTER = SEARCH
-   ========================================================= */
+========================================================= */
 
 document
     .getElementById("customerNumber")
@@ -1406,7 +1552,9 @@ document
         "keydown",
         function(event) {
 
-            if (event.key === "Enter") {
+            if (
+                event.key === "Enter"
+            ) {
 
                 event.preventDefault();
 
@@ -1417,19 +1565,25 @@ document
 
 
 /* =========================================================
-   CEK API SAAT HALAMAN DIMUAT
-   ========================================================= */
+   INITIAL CHECK
+========================================================= */
 
-console.log(
-    "Bromo Escapes Check-In System loaded."
+window.addEventListener(
+    "load",
+    function() {
+
+        console.log(
+            "Bromo Escapes Check-In loaded."
+        );
+
+        console.log(
+            "API URL:",
+            API_URL
+        );
+    }
 );
 
-console.log(
-    "API URL:",
-    API_URL
-);
 </script>
 
 </body>
 </html>
-```
